@@ -1,10 +1,10 @@
 using Convex
 using PyPlot
 
-n=100
-A=randn(n,n)
-b=randn(n,1)
-x=Variable(n)
+
+A=randn(100,30)
+b=randn(100,1)
+x=Variable(30)
 p=minimize(0.5*sum_squares(A*x-b)+10*norm(x,1))
 solve!(p,ECOS.ECOSSolver())
 
