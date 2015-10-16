@@ -1,0 +1,80 @@
+clc;
+clear all;
+data = load('RankGREdata.txt');
+%data = data(1:10,:);
+admission = data(:,1)';
+% 1st col is GRE and 2rd col is GPA
+GREGPA = [data(:,2)/800,data(:,3)/4];
+
+%% Relationship
+% the a initional a(1) is GRE and a(2) is GPA a(3) is bata
+a = [5,5,-10];
+grd = [];
+obj = [];
+step = 0.01;
+inter = 1;
+Threshold = 10;
+while inter <= 1000;
+    a1 = ObjectFa1(admission,GREGPA,a(inter,1:2)',a(inter,3));
+    a2 = ObjectFa2(admission,GREGPA,a(inter,1:2)',a(inter,3));
+    beta = ObjectFp(admission,GREGPA,a(inter,1:2)',a(inter,3));
+    % linear search
+    
+    
+    a = [a;a(inter,1)-step*a1,a(inter,2)-step*a2,a(inter,3)-step*beta];
+    grd = [grd;a1,a2,beta]; 
+    obj = [obj;ObjectF(admission,GREGPA,a(inter,1:2)',a(inter,3))];
+    Threshold = ObjectF(admission,GREGPA,a(inter+1,1:2)',a(inter+1,3)) - ObjectF(admission,GREGPA,a(inter,1:2)',a(inter,3));
+    if abs(Threshold) < 0.0001;
+        break
+    end
+inter = inter + 1;
+end
+
+%% Plot
+%{
+Pass = data(data(:,1)==1,1:3);
+Nopass = data(data(:,1)==0,1:3);
+plot(Pass(:,2)/800,Pass(:,3)/4,'r*');
+hold on;
+plot(Nopass(:,2)/800,Nopass(:,3)/4,'bo')
+hold on;
+x = 0:0.1:1;
+y = (0.5 - a(length(a(:,1)),3) - a(length(a(:,1)),1)*x )/a(length(a(:,1)),2);
+plot(x,y,'-k');
+hold on;
+
+ylabel('GPA/4'); 
+xlabel('GRE/800');
+legend('Pass','Rejected')
+xlim([0,1]);
+ylim([0,1]);
+hold on
+%}
+
+%% converge plot
+ax(1) = subplot(1,3,1); 
+    plot(1:length(a(:,1)),a(:,1),'.r');
+    hold on;
+    plot(1:length(a(:,1)),a(:,2),'.k');
+    hold on;
+    plot(1:length(a(:,1)),a(:,3),'.b');
+    hold off;
+ax(2) = subplot(1,3,2);
+    plot(1:length(grd(:,1)),grd(:,1),'.r');
+    hold on;
+    plot(1:length(grd(:,1)),grd(:,2),'.k');
+    hold on;
+    plot(1:length(grd(:,1)),grd(:,3),'.b');
+    hold off;
+ax(3) = subplot(1,3,3);
+    plot(1:length(obj),obj,'.r');
+    hold off;
+
+
+
+
+
+
+
+
