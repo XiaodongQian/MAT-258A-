@@ -1,0 +1,44 @@
+Pkg.clone("https://github.com/mpf/Toms566.jl.git")
+using Toms566
+p = Problem(1)
+x = p.x0
+ori_grd = p.grd(p.x0)
+optTol = 0.00001
+a = 1
+u = 0.3
+iter = 1
+while norm(p.grd(x)) > optTol*norm(ori_grd) && iter < 1000
+    ev = eigvals(p.hes(x))
+    print(ev)
+    if isposdef(p.hes(x))
+    else     
+        i = 1
+        while i < (length(ev)+1)
+            if ev[i] < 0
+                ev[i] = 0
+            end
+            i = i + 1
+        end
+    end
+    
+    # modify the eigenvalue 
+    new_ev = zeros(length(ev),length(ev))
+    j = 1
+    while j < length(ev) + 1
+        if ev[j] == 0
+        else
+            new_ev[j,j] = 1/ev[j]
+        end
+        j = j + 1
+    end
+    dir = -new_ev*p.grd(x)
+    ar = a
+    while p.obj( x - ar*dir.*p.grd(x) ) > p.obj(x) - norm((u*p.grd(x)')*(ar*dir)) 
+        ar = ar/2        
+    end
+    print("ar de value","\n")
+    print(ar,"\n")
+    print(p.obj(x),"\n" )
+    x = x + dir*ar
+    iter = iter + 1 
+end
