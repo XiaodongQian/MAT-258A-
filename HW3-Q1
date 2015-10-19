@@ -1,38 +1,42 @@
 
 Pkg.clone("https://github.com/mpf/Toms566.jl.git")
 using Toms566
-p = Problem(1)
-x = p.x0
-ori_grd = p.grd(p.x0)
-optTol = 0.00001
-mu = 0.00005
-iter = 1
-while norm(p.grd(x)) > optTol*norm(ori_grd) && iter < 5000
-    if isposdef(p.hes(x))
-    else     
-        (u,s,v) = svd(p.hes(x))
-        j = 1
-        while j <= length(s)
-            if s[j] <= 0
-                s[j] = 0.00004
+function newtmin(num)
+    p = Problem(9)
+    x = p.x0
+    ori_grd = p.grd(p.x0)
+    optTol = 0.00001
+    mu = 0.005
+    iter = 1
+    while norm(p.grd(x)) > optTol*norm(ori_grd) && iter < 40000
+        if isposdef(p.hes(x))
+            dir = -inv(p.hes(x))*p.grd(x)
+        else     
+            (u,s,v) = svd(p.hes(x))
+            j = 1
+            while j <= length(s)
+                if s[j] <= 0
+                    s[j] = 0.004
+                end
+                j += 1
             end
-            j += 1
+            S = zeros(length(s),length(s))
+            i = 1 
+            while i <= length(s)
+                S[i,i] = s[i]
+                i += 1
+            end
+            dir = -(u*inv(S)*v')'*p.grd(x)
         end
+    
+        step = 1
+        while p.obj( x - step*p.grd(x) ) > p.obj(x) - mu*step*(norm(p.grd(x)))^2 
+            step = step/2        
+        end
+        x = x + dir*step
+        iter = iter + 1 
     end
-    S = zeros(length(s),length(s))
-    i = 1 
-    while i <= length(s)
-        S[i,i] = s[i]
-        i += 1
-    end
-    dir = -(u*inv(S)*v')'*p.grd(x)
-    step = 1
-    while p.obj( x - step*p.grd(x) ) > p.obj(x) - mu*step*(norm(p.grd(x)))^2 
-        step = step/2        
-    end
-    x = x + dir*step
-    iter = iter + 1 
+    print(iter,"\n")
+    print(p.obj(x),"\n")
+    print(norm(p.grd(x)),"\n" )
 end
-print(iter,"\n")
-print(p.obj(x),"\n")
-print(norm(p.grd(x)),"\n" )
