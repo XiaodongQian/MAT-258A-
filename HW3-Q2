@@ -1,54 +1,48 @@
 clc;
 clear all;
 data = load('RankGREdata.txt');
-%data = data(1:10,:);
-admission = data(:,1)';
-% 1st col is GRE and 2rd col is GPA
-GREGPA = [data(:,2)/800,data(:,3)/4];
-
+admission = data(:,1);
+GREGPA = [data(:,2)/800,data(:,3)/4];% 1st col is GRE and 2rd col is GPA
 %% Relationship
 % the a initional a(1) is GRE and a(2) is GPA a(3) is bata
-a = [1,1,-10];
+a = [0,0,0];
 grd = [];
 obj = [];
-step = 0.5;
-inter = 1;
-Threshold = 10;
-while inter <= 200;
-    inter
-    a1 = ObjectFa1(admission,GREGPA,a(inter,1:2)',a(inter,3));
-    a2 = ObjectFa2(admission,GREGPA,a(inter,1:2)',a(inter,3));
-    beta = ObjectFp(admission,GREGPA,a(inter,1:2)',a(inter,3));
-    % linear search
-    a11 = sum(((GREGPA(:,1).^2).*exp(GREGPA*a(inter,1:2)'))./((1+exp(GREGPA*a(inter,1:2)')).^2));
-    a22 = sum(((GREGPA(:,2).^2).*exp(GREGPA*a(inter,1:2)'))./((1+exp(GREGPA*a(inter,1:2)')).^2));
-    a12 = sum(((GREGPA(:,2).*GREGPA(:,1)).*exp(GREGPA*a(inter,1:2)'))./((1+exp(GREGPA*a(inter,1:2)')).^2));
-    a1beta = sum((GREGPA(:,1).*exp(GREGPA*a(inter,1:2)'))./((1+exp(GREGPA*a(inter,1:2)')).^2));
-    a2beta = sum((GREGPA(:,2).*exp(GREGPA*a(inter,1:2)'))./((1+exp(GREGPA*a(inter,1:2)')).^2));
-    beta2 = sum(exp(GREGPA*a(inter,1:2)')./((1+exp(GREGPA*a(inter,1:2)')).^2));
-    Hession = [a11,a12,a1beta
-        a12,a22,a2beta
-        a1beta,a2beta,beta2]
-    ev = eig(Hession);
-    for i = 1:length(ev)
-        if ev(i)<0
-            ev(i) = 0.004;
-        end
-    end
-    dir = - [a1;a2;beta]./ev
-    
-    a = [a;a(inter,1)+step*dir(1),a(inter,2)+step*dir(2),a(inter,3)+step*dir(3)];
-    grd = [grd;dir(1),dir(2),dir(3)]; 
-    obj = [obj;ObjectF(admission,GREGPA,a(inter,1:2)',a(inter,3))];
-    Threshold = ObjectF(admission,GREGPA,a(inter+1,1:2)',a(inter+1,3)) - ObjectF(admission,GREGPA,a(inter,1:2)',a(inter,3));
-    if abs(Threshold) < 0.0001;
+iter = 1;
+u = 0.0005;
+syms a1 a2 beta;
+L = -sum(admission.*(GREGPA*[a1;a2]+beta))+sum(log(1+exp(GREGPA*[a1;a2]+beta)));
+L_hat = matlabFunction(L);
+grad = gradient(L,[a1,a2,beta]);
+H = hessian(L,[a1 a2 beta]);
+f_H = matlabFunction(H);
+f_G = matlabFunction(grad);  
+while iter <= 1000;
+    f_dir = f_G(a(iter,1),a(iter,2),a(iter,3));
+    if norm(f_dir) < 0.0001;
         break
     end
-    inter = inter + 1;
+    [U,S,V]=svd(f_H(a(iter,1),a(iter,2),a(iter,3)));
+    for i = 1:length(diag(S))
+        if S(i,i)<=0
+            S(i,i) = 0.0004;
+        end
+    end
+    dir = -(U*inv(S)*V')'*f_dir;
+    % line search
+    step = 1;
+    while L_hat(a(iter,1)-step*f_dir(1),a(iter,2)-step*f_dir(2),a(iter,3)-step*f_dir(3)) > L_hat(a(iter,1),a(iter,2),a(iter,3)) - step*u*norm(f_dir)^2;
+        step = step/2;
+    end
+    a = [a;a(iter,:)+step*dir'];
+    grd = [grd;norm(f_dir)]; 
+    obj = [obj;L_hat(a(iter,1),a(iter,2),a(iter,3))];
+    
+    iter = iter + 1;
 end
 
 %% Plot
-%{
+
 Pass = data(data(:,1)==1,1:3);
 Nopass = data(data(:,1)==0,1:3);
 plot(Pass(:,2)/800,Pass(:,3)/4,'r*');
@@ -56,7 +50,7 @@ hold on;
 plot(Nopass(:,2)/800,Nopass(:,3)/4,'bo')
 hold on;
 x = 0:0.1:1;
-y = (0.5 - a(length(a(:,1)),3) - a(length(a(:,1)),1)*x )/a(length(a(:,1)),2);
+y = (-0.5 - a(length(a(:,1)),3) - a(length(a(:,1)),1)*x )/a(length(a(:,1)),2);
 plot(x,y,'-k');
 hold on;
 
@@ -66,9 +60,10 @@ legend('Pass','Rejected')
 xlim([0,1]);
 ylim([0,1]);
 hold on
-%}
+
 
 %% converge plot
+%{
 ax(1) = subplot(1,3,1); 
     plot(1:length(a(:,1)),a(:,1),'.r');
     hold on;
@@ -77,58 +72,16 @@ ax(1) = subplot(1,3,1);
     plot(1:length(a(:,1)),a(:,3),'.b');
     hold off;
 ax(2) = subplot(1,3,2);
-    plot(1:length(grd(:,1)),grd(:,1),'.r');
-    hold on;
-    plot(1:length(grd(:,1)),grd(:,2),'.k');
-    hold on;
-    plot(1:length(grd(:,1)),grd(:,3),'.b');
+    plot(1:length(grd),grd,'.r');
     hold off;
 ax(3) = subplot(1,3,3);
     plot(1:length(obj),obj,'.r');
     hold off;
-    
-function L = ObjectF(ad,u,a,p)
-l = 0;
-m = 1;
-while m <= length(u(:,1))
-    l = l + log10(1+exp(u(m,:)*a+p));
-    m = m + 1;
-end
-L = -ad*(u*a+p)+ l;
-end 
+%}
 
-
-function L = ObjectFa1(ad,u,a,p)
-l = 0;
-m = 1;
-while m <= length(u(:,1))
-    l = l + exp(u(m,:)*a+p)/(1+exp(u(m,:)*a+p))*u(m,1);
-    m = m + 1;
-end
-L = -ad*u(:,1)+l;
-end 
-
-function L = ObjectFa2(ad,u,a,p)
-l = 0;
-m = 1;
-while m <= length(u(:,1))
-    l = l + exp(u(m,:)*a+p)/(1+exp(u(m,:)*a+p))*u(m,2);
-    m = m + 1;
-end
-L = -ad*u(:,2)+l;
-end 
-
-function L = ObjectFp(ad,u,a,p)
-l = 0;
-m = 1;
-while m <= length(u(:,1))
-    l = l + ( ad(m)-exp(u(m,:)*a+p)/(1+exp(u(m,:)*a+p)) );
-    m = m + 1;
-end
-L = -l;
-end 
-
-
+xlswrite('NTvar.xls',[a(:,1),a(:,2),a(:,3)]);
+xlswrite('NTgrd.xls',grd);
+xlswrite('NTobj.xls',obj);
 
 
 
