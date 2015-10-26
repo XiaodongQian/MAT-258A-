@@ -1,0 +1,48 @@
+Pkg.clone("https://github.com/mpf/Toms566.jl.git")
+using Toms566
+function newtmin(num)
+    p = Problem(num)
+    x = p.x0
+    ori_grd = p.grd(p.x0)
+    optTol = 0.000000001
+    mu = 0.005
+    if isposdef(p.hes(x))
+        B = inv(p.hes(x))
+    else     
+        (u,s,v) = svd(p.hes(x))
+        j = 1
+        while j <= length(s)
+            if s[j] <= 0
+                s[j] = 0.004
+            end
+            j += 1
+        end
+        S = zeros(length(s),length(s))
+        i = 1 
+        while i <= length(s)
+            S[i,i] = s[i]
+            i += 1
+        end
+        B = (u*inv(S)*v')'
+    end
+    
+    iter = 1
+    while norm(p.grd(x)) > optTol*norm(ori_grd) && iter < 1000
+        dir = -B*p.grd(x)
+        step = 1
+        while p.obj( x + step*dir) > p.obj(x) + mu*step*vecdot(dir,p.grd(x)) 
+            step = step/2        
+        end
+        grd1 = p.grd(x)
+        x = x + dir*step
+        grd2 = p.grd(x)
+        s = step*dir
+        y = grd2 - grd1
+        rr = 1/(y'*s)
+        B = (eye(length(y))-rr*s*y')*B*(eye(length(y))-rr*y*s')+rr*s*s'
+        iter = iter + 1 
+    end
+    print(iter,"\n")
+    print(p.obj(x),"\n")
+    print(norm(p.grd(x)),"\n" )
+end
