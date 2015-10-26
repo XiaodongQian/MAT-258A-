@@ -1,6 +1,6 @@
 Pkg.clone("https://github.com/mpf/Toms566.jl.git")
 using Toms566
-function newtmin(num)
+function BFGSmin(num)
     p = Problem(num)
     x = p.x0
     ori_grd = p.grd(p.x0)
@@ -38,11 +38,9 @@ function newtmin(num)
         grd2 = p.grd(x)
         s = step*dir
         y = grd2 - grd1
-        rr = 1/(y'*s)
+        rr = 1/(y'*s)[1]
         B = (eye(length(y))-rr*s*y')*B*(eye(length(y))-rr*y*s')+rr*s*s'
         iter = iter + 1 
     end
-    print(iter,"\n")
-    print(p.obj(x),"\n")
-    print(norm(p.grd(x)),"\n" )
+    return(iter,p.obj(x),norm(p.grd(x)))
 end
