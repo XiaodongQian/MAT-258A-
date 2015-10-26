@@ -37,5 +37,4 @@ function newtmin(num)
     print(iter,"\n")
     print(p.obj(x),"\n")
     print(norm(p.grd(x)),"\n" )
-end
-  
+end 
