@@ -1,4 +1,3 @@
-Pkg.clone("https://github.com/mpf/Toms566.jl.git")
 using Toms566
 function BFGSmin(num)
     p = Problem(num)
@@ -27,7 +26,7 @@ function BFGSmin(num)
     end
     
     iter = 1
-    while norm(p.grd(x)) > optTol*norm(ori_grd) && iter < 1000
+    while norm(p.grd(x)) > optTol*norm(ori_grd) && iter < 1000 
         dir = -B*p.grd(x)
         step = 1
         while p.obj( x + step*dir) > p.obj(x) + mu*step*vecdot(dir,p.grd(x)) 
@@ -37,6 +36,10 @@ function BFGSmin(num)
         x = x + dir*step
         grd2 = p.grd(x)
         s = step*dir
+        if grd1 == grd2
+            return(iter,p.obj(x),norm(p.grd(x)))
+            break
+        end
         y = grd2 - grd1
         rr = 1/(y'*s)[1]
         B = (eye(length(y))-rr*s*y')*B*(eye(length(y))-rr*y*s')+rr*s*s'
